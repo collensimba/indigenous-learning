@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { Redis } from '@upstash/redis';
 
+const redis = Redis.fromEnv();
 const JWT_SECRET = process.env.JWT_SECRET || 'dandaro-secret-key-2026';
-
-const users: any[] = [];
 
 function getUserFromToken(request: NextRequest) {
   const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -32,10 +32,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = users.find(u => u.id === decoded.userId);
-    if (!user) {
+    // Get user from Upstash Redis
+    const userData = await redis.get(`user:${decoded.email}`);
+    if (!userData) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    const user = typeof userData === 'string' ? JSON.parse(userData) : userData;
 
     const child = {
       id: `child_${Date.now()}`,
@@ -48,9 +51,13 @@ export async function POST(request: NextRequest) {
 
     user.children.push(child);
 
+    // Save updated user back to Upstash Redis
+    await redis.set(`user:${decoded.email}`, JSON.stringify(user));
+
     return NextResponse.json({ success: true, child });
 
   } catch (error) {
+    console.error('Add child error:', error);
     return NextResponse.json(
       { error: 'Failed to add child profile' },
       { status: 500 }
@@ -66,14 +73,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = users.find(u => u.id === decoded.userId);
-    if (!user) {
+    // Get user from Upstash Redis
+    const userData = await redis.get(`user:${decoded.email}`);
+    if (!userData) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    const user = typeof userData === 'string' ? JSON.parse(userData) : userData;
 
     return NextResponse.json({ success: true, children: user.children });
 
   } catch (error) {
+    console.error('Get children error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch children' },
       { status: 500 }
