@@ -243,10 +243,9 @@ export default function DashboardPage() {
                     style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px', fontSize: '0.95em', boxSizing: 'border-box' }}
                   >
                     <option value="">Select language...</option>
-                    <option value="Shona">Shona</option>
-                    <option value="Ndebele">Ndebele</option>
-                    <option value="Tonga">Tonga</option>
-                    <option value="English">English</option>
+<option value="Shona">Shona</option>
+<option value="Ndebele">Ndebele</option>
+<option value="Tonga">Tonga</option>
                   </select>
                 </div>
               </div>
