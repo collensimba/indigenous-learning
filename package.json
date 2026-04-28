@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@popperjs/core": "^2.11.8",
     "@supabase/supabase-js": "^2.105.0",
     "@upstash/redis": "^1.37.0",
     "bcryptjs": "^3.0.3",
+    "bootstrap": "^5.3.8",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.11.0",
     "next": "16.2.4",
