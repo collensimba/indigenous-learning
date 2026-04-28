@@ -21,14 +21,26 @@ export default function Home() {
               <p className="text-green-200 text-sm">Indigenous Language Learning</p>
             </div>
           </div>
-          <nav className="flex gap-4">
-            <button
-              onClick={() => window.location.href = "/learn"}
-              className="bg-white text-green-700 px-4 py-2 rounded-lg font-semibold hover:bg-green-50 transition"
-            >
-              Start Learning
-            </button>
-          </nav>
+          <nav className="flex gap-4 items-center">
+  <button
+    onClick={() => window.location.href = "/login"}
+    className="text-white border border-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+  >
+    Login
+  </button>
+  <button
+    onClick={() => window.location.href = "/register"}
+    className="bg-white text-green-700 px-4 py-2 rounded-lg font-semibold hover:bg-green-50 transition"
+  >
+    Register
+  </button>
+  <button
+    onClick={() => window.location.href = "/learn"}
+    className="bg-yellow-400 text-green-900 px-4 py-2 rounded-lg font-semibold hover:bg-yellow-300 transition"
+  >
+    Start Learning
+  </button>
+</nav>
         </div>
       </header>
 
