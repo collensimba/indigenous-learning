@@ -1,31 +1,30 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { BookOpen, BarChart3, LogOut, Plus, User } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [children, setChildren] = useState<any[]>([]);
-  const [showAddChild, setShowAddChild] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [childForm, setChildForm] = useState({
-    aliasName: '',
-    gradeLevel: '',
-    preferredLanguage: '',
-    schoolName: '',
+    aliasName: '', gradeLevel: '', preferredLanguage: '', schoolName: '',
   });
 
   useEffect(() => {
+    const bootstrap = require('bootstrap/dist/js/bootstrap.bundle.min.js');
+    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(el => new bootstrap.Tooltip(el));
+
     const storedUser = localStorage.getItem('dandaro_user');
     const token = localStorage.getItem('dandaro_token');
-    if (!storedUser || !token) {
-      router.push('/login');
-      return;
-    }
-    setUser(JSON.parse(storedUser));
-    setChildren(JSON.parse(storedUser).children || []);
+    if (!storedUser || !token) { router.push('/login'); return; }
+    const u = JSON.parse(storedUser);
+    setUser(u);
+    setChildren(u.children || []);
   }, []);
 
   const handleLogout = () => {
@@ -36,45 +35,28 @@ export default function DashboardPage() {
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-    setLoading(true);
-
+    setError(''); setSuccess(''); setLoading(true);
     try {
       const token = localStorage.getItem('dandaro_token');
       const res = await fetch('/api/children', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(childForm),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to add child');
-        return;
-      }
-
-      // Update local state
+      if (!res.ok) { setError(data.error || 'Failed to add child'); return; }
       const newChildren = [...children, data.child];
       setChildren(newChildren);
-
-      // Update localStorage
       const updatedUser = { ...user, children: newChildren };
       localStorage.setItem('dandaro_user', JSON.stringify(updatedUser));
-
       setSuccess(`${data.child.aliasName}'s profile created successfully!`);
-      setShowAddChild(false);
       setChildForm({ aliasName: '', gradeLevel: '', preferredLanguage: '', schoolName: '' });
-
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+      // Close modal
+      const bootstrap = require('bootstrap/dist/js/bootstrap.bundle.min.js');
+      const modal = bootstrap.Modal.getInstance(document.getElementById('addChildModal'));
+      modal?.hide();
+    } catch { setError('Something went wrong. Please try again.'); }
+    finally { setLoading(false); }
   };
 
   const handleLearn = (child: any) => {
@@ -82,262 +64,301 @@ export default function DashboardPage() {
     router.push('/learn');
   };
 
+  const handleDeleteChild = (id: string) => {
+    const newChildren = children.filter(c => c.id !== id);
+    setChildren(newChildren);
+    const updatedUser = { ...user, children: newChildren };
+    localStorage.setItem('dandaro_user', JSON.stringify(updatedUser));
+    setSuccess('Child profile removed.');
+  };
+
+  const langEmoji: any = { Shona: '🦁', Ndebele: '🐘', Tonga: '🦒' };
+  const langColor: any = { Shona: '#1e8449', Ndebele: '#2471a3', Tonga: '#7d3c98' };
+
   if (!user) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4f8' }}>
-      <p style={{ color: '#666', fontSize: '1.1em' }}>Loading...</p>
+    <div className="min-vh-100 d-flex align-items-center justify-content-center"
+      style={{ background: 'linear-gradient(135deg, #1a5276, #1e8449)' }}>
+      <div className="text-center text-white">
+        <div className="spinner-border text-light mb-3" style={{ width: '3rem', height: '3rem' }}></div>
+        <p className="fs-5">Loading your dashboard...</p>
+      </div>
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f4f8', fontFamily: 'Arial, sans-serif' }}>
+    <div className="min-vh-100" style={{ background: '#f0f4f8' }}>
 
-      {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1a5276, #1e8449)',
-        padding: '20px 32px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <div>
-          <h1 style={{ color: 'white', margin: 0, fontSize: '1.8em', fontWeight: 'bold' }}>
-            🌍 Dandaro
-          </h1>
-          <p style={{ color: 'rgba(255,255,255,0.8)', margin: '4px 0 0', fontSize: '0.9em' }}>
-            Welcome back, {user.name}
-          </p>
+      {/* Navbar */}
+      <nav className="navbar navbar-expand-lg shadow-sm sticky-top"
+        style={{ background: 'linear-gradient(135deg, #1a5276, #1e8449)' }}>
+        <div className="container">
+          <a className="navbar-brand d-flex align-items-center gap-2 text-white fw-bold fs-4" href="/">
+            <BookOpen size={26} /> Dandaro
+          </a>
+          <div className="d-flex align-items-center gap-3">
+            {/* User Dropdown */}
+            <div className="dropdown">
+              <button className="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-2"
+                data-bs-toggle="dropdown">
+                <User size={16} /> {user.name}
+              </button>
+              <ul className="dropdown-menu dropdown-menu-end shadow">
+                <li><span className="dropdown-item-text text-muted small">{user.email}</span></li>
+                <li><span className="dropdown-item-text text-muted small">Role: {user.role}</span></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li>
+                  <button className="dropdown-item text-danger d-flex align-items-center gap-2"
+                    onClick={handleLogout}>
+                    <LogOut size={14} /> Logout
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={handleLogout}
-          style={{
-            background: 'rgba(255,255,255,0.2)',
-            color: 'white',
-            border: '1px solid rgba(255,255,255,0.4)',
-            borderRadius: '8px',
-            padding: '8px 20px',
-            cursor: 'pointer',
-            fontSize: '0.9em',
-          }}
-        >
-          Logout
-        </button>
-      </div>
+      </nav>
 
-      {/* Main Content */}
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 20px' }}>
+      <div className="container py-4">
 
-        {/* Success / Error Messages */}
+        {/* Welcome Banner */}
+        <div className="card border-0 shadow-sm mb-4 text-white"
+          style={{ background: 'linear-gradient(135deg, #1a5276, #1e8449)', borderRadius: '16px' }}>
+          <div className="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+              <h3 className="fw-bold mb-1">👋 Welcome back, {user.name}!</h3>
+              <p className="mb-0 opacity-75">Manage your children's learning profiles below.</p>
+            </div>
+            <div className="d-flex gap-3 text-center">
+              <div className="bg-white bg-opacity-10 rounded-3 px-4 py-2">
+                <div className="fs-4 fw-bold">{children.length}</div>
+                <div className="small opacity-75">Profiles</div>
+              </div>
+              <div className="bg-white bg-opacity-10 rounded-3 px-4 py-2">
+                <div className="fs-4 fw-bold">
+                  {[...new Set(children.map(c => c.preferredLanguage))].length}
+                </div>
+                <div className="small opacity-75">Languages</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Alerts */}
         {success && (
-          <div style={{
-            background: '#eafaf1', border: '1px solid #a9dfbf',
-            borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', color: '#1e8449',
-          }}>
-            ✅ {success}
+          <div className="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2">
+            <span>✅</span><span>{success}</span>
+            <button type="button" className="btn-close" onClick={() => setSuccess('')}></button>
           </div>
         )}
         {error && (
-          <div style={{
-            background: '#fdecea', border: '1px solid #f5c6cb',
-            borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', color: '#c0392b',
-          }}>
-            ⚠️ {error}
+          <div className="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2">
+            <span>⚠️</span><span>{error}</span>
+            <button type="button" className="btn-close" onClick={() => setError('')}></button>
           </div>
         )}
 
-        {/* Children Section */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ color: '#1a5276', margin: 0, fontSize: '1.4em' }}>
+        {/* Section Header */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5 className="fw-bold mb-0" style={{ color: '#1a5276' }}>
             👧 Child Profiles ({children.length})
-          </h2>
-          <button
-            onClick={() => setShowAddChild(!showAddChild)}
-            style={{
-              background: 'linear-gradient(135deg, #1a5276, #1e8449)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '10px 20px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '0.95em',
-            }}
-          >
-            + Add Child Profile
+          </h5>
+          <button className="btn btn-success fw-bold d-flex align-items-center gap-2"
+            data-bs-toggle="modal" data-bs-target="#addChildModal">
+            <Plus size={16} /> Add Child Profile
           </button>
         </div>
 
-        {/* Add Child Form */}
-        {showAddChild && (
-          <div style={{
-            background: 'white', borderRadius: '12px',
-            padding: '28px', marginBottom: '24px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            border: '2px solid #1a5276',
-          }}>
-            <h3 style={{ color: '#1a5276', marginTop: 0, marginBottom: '20px' }}>
-              Add a Child Profile
-            </h3>
-            <form onSubmit={handleAddChild}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                {/* Alias Name */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#333', fontSize: '0.9em' }}>
-                    Alias Name (not real name)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Champ, Star, Braveheart"
-                    value={childForm.aliasName}
-                    onChange={e => setChildForm({ ...childForm, aliasName: e.target.value })}
-                    required
-                    style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px', fontSize: '0.95em', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                {/* School Name */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#333', fontSize: '0.9em' }}>
-                    School Name (optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Harare Primary School"
-                    value={childForm.schoolName}
-                    onChange={e => setChildForm({ ...childForm, schoolName: e.target.value })}
-                    style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px', fontSize: '0.95em', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                {/* Grade Level */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#333', fontSize: '0.9em' }}>
-                    Grade Level
-                  </label>
-                  <select
-                    value={childForm.gradeLevel}
-                    onChange={e => setChildForm({ ...childForm, gradeLevel: e.target.value })}
-                    required
-                    style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px', fontSize: '0.95em', boxSizing: 'border-box' }}
-                  >
-                    <option value="">Select grade...</option>
-                    <option value="ECD">ECD (Early Childhood)</option>
-                    <option value="Grade 1">Grade 1</option>
-                    <option value="Grade 2">Grade 2</option>
-                    <option value="Grade 3">Grade 3</option>
-                    <option value="Grade 4">Grade 4</option>
-                    <option value="Grade 5">Grade 5</option>
-                    <option value="Grade 6">Grade 6</option>
-                    <option value="Grade 7">Grade 7</option>
-                  </select>
-                </div>
-
-                {/* Language */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#333', fontSize: '0.9em' }}>
-                    Preferred Language
-                  </label>
-                  <select
-                    value={childForm.preferredLanguage}
-                    onChange={e => setChildForm({ ...childForm, preferredLanguage: e.target.value })}
-                    required
-                    style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px', fontSize: '0.95em', boxSizing: 'border-box' }}
-                  >
-                    <option value="">Select language...</option>
-<option value="Shona">Shona</option>
-<option value="Ndebele">Ndebele</option>
-<option value="Tonga">Tonga</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    padding: '10px 28px',
-                    background: loading ? '#95a5a6' : 'linear-gradient(135deg, #1a5276, #1e8449)',
-                    color: 'white', border: 'none', borderRadius: '8px',
-                    fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.95em',
-                  }}
-                >
-                  {loading ? 'Saving...' : 'Save Child Profile'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddChild(false)}
-                  style={{
-                    padding: '10px 28px', background: '#ecf0f1',
-                    color: '#333', border: 'none', borderRadius: '8px',
-                    cursor: 'pointer', fontSize: '0.95em',
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
         {/* Children Cards */}
         {children.length === 0 ? (
-          <div style={{
-            background: 'white', borderRadius: '12px', padding: '48px',
-            textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-          }}>
-            <p style={{ fontSize: '3em', margin: '0 0 16px' }}>👧</p>
-            <h3 style={{ color: '#1a5276', marginBottom: '8px' }}>No child profiles yet</h3>
-            <p style={{ color: '#666', marginBottom: '20px' }}>
-              Add your first child profile to get started with Dandaro
-            </p>
-            <button
-              onClick={() => setShowAddChild(true)}
-              style={{
-                background: 'linear-gradient(135deg, #1a5276, #1e8449)',
-                color: 'white', border: 'none', borderRadius: '8px',
-                padding: '12px 28px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1em',
-              }}
-            >
-              + Add First Child
-            </button>
+          <div className="card border-0 shadow-sm text-center py-5">
+            <div className="card-body">
+              <div style={{ fontSize: '4rem' }}>👧</div>
+              <h4 className="fw-bold mt-3" style={{ color: '#1a5276' }}>No child profiles yet</h4>
+              <p className="text-muted mb-4">Add your first child profile to get started with Dandaro</p>
+              <button className="btn btn-success btn-lg fw-bold px-5"
+                data-bs-toggle="modal" data-bs-target="#addChildModal">
+                + Add First Child
+              </button>
+            </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+          <div className="row g-4">
             {children.map((child: any) => (
-              <div key={child.id} style={{
-                background: 'white', borderRadius: '12px', padding: '24px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                border: '2px solid #eaf4fb',
-              }}>
-                <div style={{ fontSize: '2.5em', marginBottom: '12px', textAlign: 'center' }}>
-                  {child.preferredLanguage === 'Shona' ? '🦁' :
-                   child.preferredLanguage === 'Ndebele' ? '🐘' :
-                   child.preferredLanguage === 'Tonga' ? '🦒' : '⭐'}
+              <div key={child.id} className="col-md-4">
+                <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+                  {/* Card top color bar */}
+                  <div style={{ height: '6px', background: langColor[child.preferredLanguage] || '#1a5276' }}></div>
+                  <div className="card-body p-4 text-center">
+                    <div style={{ fontSize: '3rem' }}>{langEmoji[child.preferredLanguage] || '⭐'}</div>
+                    <h4 className="fw-bold mt-2 mb-1" style={{ color: '#1a5276' }}>{child.aliasName}</h4>
+
+                    {/* Badges */}
+                    <div className="d-flex justify-content-center gap-2 flex-wrap mb-3">
+                      <span className="badge rounded-pill px-3 py-2"
+                        style={{ background: langColor[child.preferredLanguage] || '#1a5276' }}>
+                        🌍 {child.preferredLanguage}
+                      </span>
+                      <span className="badge rounded-pill bg-secondary px-3 py-2">
+                        📚 {child.gradeLevel}
+                      </span>
+                      {child.schoolName && (
+                        <span className="badge rounded-pill bg-light text-dark px-3 py-2">
+                          🏫 {child.schoolName}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Analytics Collapse */}
+                    <div className="mb-3">
+                      <button className="btn btn-outline-secondary btn-sm w-100"
+                        data-bs-toggle="collapse"
+                        data-bs-target={`#analytics-${child.id}`}>
+                        <BarChart3 size={14} className="me-1" /> View Quick Stats
+                      </button>
+                      <div className="collapse mt-2" id={`analytics-${child.id}`}>
+                        <div className="card card-body bg-light border-0 text-start small">
+                          <div className="d-flex justify-content-between mb-1">
+                            <span className="text-muted">Language</span>
+                            <span className="fw-bold">{child.preferredLanguage}</span>
+                          </div>
+                          <div className="d-flex justify-content-between mb-1">
+                            <span className="text-muted">Grade</span>
+                            <span className="fw-bold">{child.gradeLevel}</span>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span className="text-muted">Joined</span>
+                            <span className="fw-bold">{new Date(child.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button onClick={() => handleLearn(child)}
+                      className="btn fw-bold w-100 text-white mb-2"
+                      style={{ background: 'linear-gradient(135deg, #1a5276, #1e8449)', borderRadius: '10px' }}>
+                      Start Learning →
+                    </button>
+                    <button
+                      className="btn btn-outline-danger btn-sm w-100"
+                      data-bs-toggle="modal"
+                      data-bs-target={`#deleteModal-${child.id}`}>
+                      Remove Profile
+                    </button>
+                  </div>
                 </div>
-                <h3 style={{ color: '#1a5276', margin: '0 0 8px', textAlign: 'center' }}>
-                  {child.aliasName}
-                </h3>
-                <div style={{ color: '#666', fontSize: '0.9em', marginBottom: '16px', textAlign: 'center' }}>
-                  <p style={{ margin: '4px 0' }}>📚 {child.gradeLevel}</p>
-                  <p style={{ margin: '4px 0' }}>🌍 {child.preferredLanguage}</p>
-                  {child.schoolName && <p style={{ margin: '4px 0' }}>🏫 {child.schoolName}</p>}
+
+                {/* Delete Confirmation Modal */}
+                <div className="modal fade" id={`deleteModal-${child.id}`} tabIndex={-1}>
+                  <div className="modal-dialog modal-dialog-centered modal-sm">
+                    <div className="modal-content" style={{ borderRadius: '16px' }}>
+                      <div className="modal-header border-0">
+                        <h6 className="modal-title fw-bold text-danger">Remove Profile</h6>
+                        <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div className="modal-body text-center py-3">
+                        <div style={{ fontSize: '2.5rem' }}>⚠️</div>
+                        <p className="mt-2">Are you sure you want to remove <strong>{child.aliasName}</strong>'s profile?</p>
+                      </div>
+                      <div className="modal-footer border-0 justify-content-center gap-2">
+                        <button className="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button className="btn btn-danger fw-bold"
+                          data-bs-dismiss="modal"
+                          onClick={() => handleDeleteChild(child.id)}>
+                          Yes, Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleLearn(child)}
-                  style={{
-                    width: '100%', padding: '10px',
-                    background: 'linear-gradient(135deg, #1a5276, #1e8449)',
-                    color: 'white', border: 'none', borderRadius: '8px',
-                    cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95em',
-                  }}
-                >
-                  Start Learning →
-                </button>
               </div>
             ))}
           </div>
         )}
+
+        {/* Info Tooltip Section */}
+        <div className="mt-4 d-flex align-items-center gap-2">
+          <span className="text-muted small">Why alias names?</span>
+          <span
+            data-bs-toggle="tooltip"
+            data-bs-placement="right"
+            title="Dandaro uses alias names to protect your child's real identity in compliance with Zimbabwe's Data Protection Act 2021. No real names are ever stored."
+            style={{ cursor: 'pointer' }}>
+            🛡️
+          </span>
+        </div>
       </div>
+
+      {/* Add Child Modal */}
+      <div className="modal fade" id="addChildModal" tabIndex={-1}>
+        <div className="modal-dialog modal-dialog-centered modal-lg">
+          <div className="modal-content" style={{ borderRadius: '20px' }}>
+            <div className="modal-header border-0"
+              style={{ background: 'linear-gradient(135deg, #1a5276, #1e8449)' }}>
+              <h5 className="modal-title text-white fw-bold">👧 Add Child Profile</h5>
+              <button type="button" className="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div className="modal-body p-4">
+              {error && (
+                <div className="alert alert-danger d-flex align-items-center gap-2">
+                  <span>⚠️</span><span>{error}</span>
+                </div>
+              )}
+              <form onSubmit={handleAddChild} id="addChildForm">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">
+                      Alias Name
+                      <span className="ms-1" data-bs-toggle="tooltip"
+                        title="Use a nickname, not your child's real name">ℹ️</span>
+                    </label>
+                    <input type="text" className="form-control" placeholder="e.g. Champ, Star"
+                      value={childForm.aliasName}
+                      onChange={e => setChildForm({ ...childForm, aliasName: e.target.value })}
+                      required />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">School Name (optional)</label>
+                    <input type="text" className="form-control" placeholder="e.g. Harare Primary"
+                      value={childForm.schoolName}
+                      onChange={e => setChildForm({ ...childForm, schoolName: e.target.value })} />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">Grade Level</label>
+                    <select className="form-select" value={childForm.gradeLevel}
+                      onChange={e => setChildForm({ ...childForm, gradeLevel: e.target.value })} required>
+                      <option value="">Select grade...</option>
+                      {['ECD', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7'].map(g => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">Preferred Language</label>
+                    <select className="form-select" value={childForm.preferredLanguage}
+                      onChange={e => setChildForm({ ...childForm, preferredLanguage: e.target.value })} required>
+                      <option value="">Select language...</option>
+                      <option value="Shona">🦁 Shona</option>
+                      <option value="Ndebele">🐘 Ndebele</option>
+                      <option value="Tonga">🦒 Tonga</option>
+                    </select>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer border-0">
+              <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" form="addChildForm" disabled={loading}
+                className="btn fw-bold text-white px-5"
+                style={{ background: 'linear-gradient(135deg, #1a5276, #1e8449)' }}>
+                {loading
+                  ? <><span className="spinner-border spinner-border-sm me-2"></span>Saving...</>
+                  : '✅ Save Profile'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
